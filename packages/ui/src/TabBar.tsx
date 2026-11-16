@@ -59,12 +59,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 6,
   },
+  // Fixed sizes, spread evenly by the bar. No flex here: a growing idle item
+  // pushed the active pill off the edge of the bar on real devices.
   item: {
-    flex: 1,
+    width: size.tabItemHeight,
     height: size.tabItemHeight,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  itemActive: { flex: 0, width: size.tabItemWidth, backgroundColor: colors.tabBarActive },
+  itemActive: { width: size.tabItemWidth, backgroundColor: colors.tabBarActive },
 });
