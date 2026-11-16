@@ -12,10 +12,7 @@ import { strings } from '@/i18n';
 /** True while the phone has no connection. */
 export function useOffline(): boolean {
   const [offline, setOffline] = useState(false);
-  useEffect(
-    () => NetInfo.addEventListener((state) => setOffline(state.isConnected === false)),
-    [],
-  );
+  useEffect(() => NetInfo.addEventListener((state) => setOffline(state.isConnected === false)), []);
   return offline;
 }
 

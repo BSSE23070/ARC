@@ -40,10 +40,7 @@ export default function SignUpAccount() {
   const shownPasswordError = passwordError ?? (serverError?.field === 'password' ? serverError.message : null);
 
   return (
-    <Screen
-      onBack={() => router.back()}
-      footer={<Button label={strings.common.continue} onPress={submit} />}
-    >
+    <Screen onBack={() => router.back()} footer={<Button label={strings.common.continue} onPress={submit} />}>
       <View style={styles.header}>
         <Text variant="title" accessibilityRole="header">
           {strings.signUp.accountTitle}

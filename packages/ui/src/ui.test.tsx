@@ -56,7 +56,13 @@ describe('TextField', () => {
     expect(screen.getByText('We never share it.')).toBeOnTheScreen();
 
     await view.rerender(
-      <TextField label="Email" value="" onChangeText={onChangeText} hint="We never share it." error="Enter a valid email address." />,
+      <TextField
+        label="Email"
+        value=""
+        onChangeText={onChangeText}
+        hint="We never share it."
+        error="Enter a valid email address."
+      />,
     );
     expect(screen.getByText('Enter a valid email address.')).toBeOnTheScreen();
     expect(screen.queryByText('We never share it.')).toBeNull();

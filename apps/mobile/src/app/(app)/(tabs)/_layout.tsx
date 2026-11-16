@@ -44,9 +44,7 @@ function ArcTabBar({ state, emitter, navigateToTab, insets }: TabBarRenderProps)
       if (!active && !event.defaultPrevented) navigateToTab(route.key);
     };
     const base = { key: route.key, label: tab.label, active, onPress };
-    return tab.icon
-      ? { ...base, icon: tab.icon }
-      : { ...base, content: <Avatar name={user.username} small /> };
+    return tab.icon ? { ...base, icon: tab.icon } : { ...base, content: <Avatar name={user.username} small /> };
   });
   return <TabBar items={items} bottomInset={insets.bottom} />;
 }

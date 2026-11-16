@@ -56,11 +56,7 @@ export default function LogIn() {
       footer={
         <>
           <Button label={strings.logIn.submit} onPress={submit} loading={busy} />
-          <Button
-            label={strings.logIn.forgot}
-            variant="ghost"
-            onPress={() => router.push('/forgot-password')}
-          />
+          <Button label={strings.logIn.forgot} variant="ghost" onPress={() => router.push('/forgot-password')} />
         </>
       }
     >
