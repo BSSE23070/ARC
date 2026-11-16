@@ -84,3 +84,32 @@ class TrustedDevice(Base):
     last_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class LivenessCheck(Base):
+    """One attempt at the liveness check (FR-04).
+
+    Only the outcome is stored. Images, video and face templates never reach
+    this database: they stay between the phone and the liveness provider.
+    """
+
+    __tablename__ = "liveness_checks"
+    __table_args__ = (
+        CheckConstraint(
+            "status in ('pending', 'passed', 'failed', 'expired')", name="status_valid"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(32))
+    # The provider's own identifier for this attempt.
+    provider_ref: Mapped[str] = mapped_column(String(128))
+    status: Mapped[str] = mapped_column(String(16), default="pending", server_default="pending")
+    # Short machine-readable reason when the check fails, e.g. "no_face".
+    failure_reason: Mapped[str | None] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

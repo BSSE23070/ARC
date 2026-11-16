@@ -6,9 +6,7 @@ import { api, sessionEvents } from '@/api';
 import { tokenStore, userCache } from '@/auth/storage';
 
 type AuthState =
-  | { status: 'loading' }
-  | { status: 'signedOut'; ended?: SessionEndReason }
-  | { status: 'signedIn'; user: User };
+  { status: 'loading' } | { status: 'signedOut'; ended?: SessionEndReason } | { status: 'signedIn'; user: User };
 
 type AuthContextValue = {
   state: AuthState;

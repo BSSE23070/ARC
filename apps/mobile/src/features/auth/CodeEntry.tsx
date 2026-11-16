@@ -21,15 +21,7 @@ type CodeEntryProps = {
 };
 
 // Figma: A-OTP / A-OTP-WRONG / A-EMAIL-CODE. Shared by sign-up and new-phone log-in.
-export function CodeEntry({
-  title,
-  message,
-  submitLabel,
-  resendAfterS,
-  onBack,
-  onSubmit,
-  onResend,
-}: CodeEntryProps) {
+export function CodeEntry({ title, message, submitLabel, resendAfterS, onBack, onSubmit, onResend }: CodeEntryProps) {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -65,14 +57,7 @@ export function CodeEntry({
   return (
     <Screen
       onBack={onBack}
-      footer={
-        <Button
-          label={submitLabel}
-          onPress={() => submit(code)}
-          loading={busy}
-          disabled={code.length !== 6}
-        />
-      }
+      footer={<Button label={submitLabel} onPress={() => submit(code)} loading={busy} disabled={code.length !== 6} />}
     >
       <View style={styles.header}>
         <Text variant="title" accessibilityRole="header">
@@ -105,13 +90,7 @@ export function CodeEntry({
             {fill(strings.common.resendIn, { time: formatSeconds(cooldown) })}
           </Text>
         ) : (
-          <Text
-            variant="input"
-            color="textPrimary"
-            onPress={resend}
-            accessibilityRole="button"
-            suppressHighlighting
-          >
+          <Text variant="input" color="textPrimary" onPress={resend} accessibilityRole="button" suppressHighlighting>
             {strings.common.resendCode}
           </Text>
         )}

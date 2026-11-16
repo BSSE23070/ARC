@@ -15,6 +15,7 @@ from arc.core.config import Settings, get_settings
 from arc.core.db import create_engine, create_session_factory
 from arc.core.email import EmailSender, build_email_sender
 from arc.core.errors import install_error_handlers
+from arc.modules.identity.liveness import LivenessProvider, build_liveness_provider
 from arc.modules.identity.passwords import BreachChecker, build_breach_checker
 from arc.modules.identity.router import router as identity_router
 
@@ -26,6 +27,7 @@ def create_app(
     *,
     email_sender: EmailSender | None = None,
     breach_checker: BreachChecker | None = None,
+    liveness_provider: LivenessProvider | None = None,
 ) -> FastAPI:
     settings = settings or get_settings()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -53,6 +55,8 @@ def create_app(
     app.state.redis = redis
     app.state.email_sender = email_sender or build_email_sender(settings)
     app.state.breach_checker = breach_checker or build_breach_checker(settings)
+
+    app.state.liveness_provider = liveness_provider or build_liveness_provider(settings)
 
     install_error_handlers(app)
     app.include_router(health.router)

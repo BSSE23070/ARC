@@ -9,10 +9,7 @@ import { strings } from '@/i18n';
 export default function Under18() {
   const router = useRouter();
   return (
-    <Screen
-      centered
-      footer={<Button label={strings.common.close} onPress={() => router.dismissTo('/')} />}
-    >
+    <Screen centered footer={<Button label={strings.common.close} onPress={() => router.dismissTo('/')} />}>
       <StateView icon={Lock} title={strings.signUp.under18Title} message={strings.signUp.under18Body} />
     </Screen>
   );

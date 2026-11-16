@@ -29,9 +29,7 @@ export function describeError(error: unknown): string {
     if (error.isNetworkError) return strings.errors.network;
     if (error.code === 'OTP_INVALID') {
       const remaining = Number(error.details.attempts_remaining ?? 0);
-      return remaining === 1
-        ? strings.errors.otpInvalidOne
-        : fill(strings.errors.otpInvalid, { count: remaining });
+      return remaining === 1 ? strings.errors.otpInvalidOne : fill(strings.errors.otpInvalid, { count: remaining });
     }
     return error.message; // server messages are written for users
   }

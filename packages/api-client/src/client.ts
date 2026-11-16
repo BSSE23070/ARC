@@ -36,7 +36,12 @@ export class ApiError extends Error {
 
 export type LoginResult =
   | { kind: 'signed_in'; user: User }
-  | { kind: 'email_code'; challengeToken: string; emailHint: string; resendAfterS: number };
+  | {
+      kind: 'email_code';
+      challengeToken: string;
+      emailHint: string;
+      resendAfterS: number;
+    };
 
 export type ApiClientOptions = {
   baseUrl: string;
@@ -85,8 +90,15 @@ export function createApiClient(options: ApiClientOptions) {
   }
 
   function toError({ status, data }: Outcome): ApiError {
-    const error = (data as { error?: { code?: string; message?: string; details?: Record<string, unknown> } })
-      ?.error;
+    const error = (
+      data as {
+        error?: {
+          code?: string;
+          message?: string;
+          details?: Record<string, unknown>;
+        };
+      }
+    )?.error;
     return new ApiError(
       status,
       error?.code ?? 'HTTP_ERROR',
@@ -106,7 +118,10 @@ export function createApiClient(options: ApiClientOptions) {
   }
 
   async function saveTokens(response: Schemas['TokenResponse']): Promise<User> {
-    await tokenStore.set({ accessToken: response.access_token, refreshToken: response.refresh_token });
+    await tokenStore.set({
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token,
+    });
     return response.user;
   }
 
@@ -115,14 +130,19 @@ export function createApiClient(options: ApiClientOptions) {
     refreshInFlight ??= (async () => {
       const current = await tokenStore.get();
       if (!current) return null;
-      const outcome = await send('POST', '/api/v1/auth/refresh', { refresh_token: current.refreshToken });
+      const outcome = await send('POST', '/api/v1/auth/refresh', {
+        refresh_token: current.refreshToken,
+      });
       if (outcome.status === 401 || outcome.status === 403) {
         await endSession(toError(outcome).code === 'ACCOUNT_SUSPENDED' ? 'suspended' : 'expired');
         return null;
       }
       const data = unwrap<Schemas['TokenResponse']>(outcome);
       await saveTokens(data);
-      return { accessToken: data.access_token, refreshToken: data.refresh_token };
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+      };
     })().finally(() => {
       refreshInFlight = null;
     });
@@ -223,14 +243,27 @@ export function createApiClient(options: ApiClientOptions) {
           email,
         } satisfies Schemas['PasswordForgotRequest']),
 
-      passwordReset: (body: Schemas['PasswordResetRequest']) =>
-        open<void>('POST', '/api/v1/auth/password/reset', body),
+      passwordReset: (body: Schemas['PasswordResetRequest']) => open<void>('POST', '/api/v1/auth/password/reset', body),
 
       passwordChange: (body: Schemas['PasswordChangeRequest']) =>
         authed<void>('POST', '/api/v1/auth/password/change', body),
     },
 
     me: () => authed<User>('GET', '/api/v1/me'),
+
+    liveness: {
+      /** Starts a liveness attempt; any attempt still open is closed. */
+      start: () => authed<Schemas['LivenessCheckOut']>('POST', '/api/v1/liveness/checks'),
+
+      /** Sends the provider's result. The server decides whether the check passed. */
+      complete: (checkId: string, evidence: Schemas['LivenessCompleteRequest']['evidence']) => {
+        const template = '/api/v1/liveness/checks/{check_id}/complete' satisfies ApiPath;
+        const path = template.replace('{check_id}', encodeURIComponent(checkId)) as ApiPath;
+        return authed<Schemas['LivenessResultOut']>('POST', path, {
+          evidence,
+        } satisfies Schemas['LivenessCompleteRequest']);
+      },
+    },
   };
 }
 

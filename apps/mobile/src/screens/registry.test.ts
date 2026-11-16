@@ -8,7 +8,11 @@ function routeFiles(dir: string, root = dir): string[] {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) return routeFiles(path, root);
     if (!entry.name.endsWith('.tsx') || entry.name.startsWith('_layout')) return [];
-    return [relative(root, path).replace(/\\/g, '/').replace(/\.tsx$/, '')];
+    return [
+      relative(root, path)
+        .replace(/\\/g, '/')
+        .replace(/\.tsx$/, ''),
+    ];
   });
 }
 

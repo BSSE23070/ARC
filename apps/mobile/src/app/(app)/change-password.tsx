@@ -38,11 +38,7 @@ export default function ChangePassword() {
   if (done) {
     return (
       <Screen centered footer={<Button label={strings.common.done} onPress={() => router.back()} />}>
-        <StateView
-          icon={Check}
-          title={strings.changePassword.doneTitle}
-          message={strings.changePassword.doneBody}
-        />
+        <StateView icon={Check} title={strings.changePassword.doneTitle} message={strings.changePassword.doneBody} />
       </Screen>
     );
   }

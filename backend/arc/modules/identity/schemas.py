@@ -1,8 +1,9 @@
 """Request and response shapes for the identity API."""
 
+import json
 import uuid
 from datetime import date, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import AfterValidator, BaseModel, BeforeValidator, EmailStr, Field, StringConstraints
 
@@ -143,4 +144,35 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: Literal["bearer"] = "bearer"
     expires_in: int = Field(description="Lifetime of the access token in seconds.")
+    user: UserOut
+
+
+# --- Liveness ---------------------------------------------------------------
+
+
+def _small_object(value: dict[str, Any]) -> dict[str, Any]:
+    # Evidence is a provider token or result, never an image.
+    if len(json.dumps(value)) > 4096:
+        raise ValueError("evidence is too large")
+    return value
+
+
+class LivenessCheckOut(BaseModel):
+    check_id: uuid.UUID
+    provider: str = Field(description="Which liveness provider the app should run.")
+    expires_in: int = Field(description="Seconds the app has to finish this attempt.")
+    client_payload: dict[str, Any] = Field(description="What the provider's SDK needs to start.")
+    attempts_left: int = Field(description="Attempts left today after this one.")
+
+
+class LivenessCompleteRequest(BaseModel):
+    evidence: Annotated[dict[str, Any], AfterValidator(_small_object)] = Field(
+        description="The provider SDK's result. Checked on the server, never trusted as-is."
+    )
+
+
+class LivenessResultOut(BaseModel):
+    status: Literal["passed", "failed"]
+    reason: str | None = Field(description="Short code for why the check failed, if it did.")
+    attempts_left: int
     user: UserOut

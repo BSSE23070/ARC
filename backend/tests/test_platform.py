@@ -40,7 +40,7 @@ def test_production_refuses_unsafe_settings() -> None:
         Settings(env="prod", email_backend="smtp")
     with pytest.raises(ValidationError, match="console"):
         Settings(env="prod", jwt_secret="x" * 40, email_backend="console")
-    Settings(env="prod", jwt_secret="x" * 40, email_backend="smtp")
+    # Production also needs a real liveness provider; see tests/test_liveness.py.
 
 
 def test_passwords_are_hashed_with_argon2id() -> None:

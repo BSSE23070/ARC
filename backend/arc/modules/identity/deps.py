@@ -1,5 +1,5 @@
-"""Identity dependencies. Other modules import ``CurrentUser`` from here to
-protect their routes."""
+"""Identity dependencies. Other modules protect their routes with ``AuthDep``
+(signed in) or ``VerifiedDep`` (signed in and passed the liveness check)."""
 
 import uuid
 from dataclasses import dataclass
@@ -11,6 +11,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from arc.core.deps import DbDep, EmailDep, RedisDep, SettingsDep
 from arc.core.errors import AppError
 from arc.core.security import decode_token
+from arc.modules.identity.liveness import LivenessProvider, LivenessService
 from arc.modules.identity.models import User
 from arc.modules.identity.passwords import BreachChecker
 from arc.modules.identity.service import IdentityService, revoked_family_key
@@ -57,5 +58,24 @@ async def get_auth_context(
     return AuthContext(user=user, family_id=family_id)
 
 
+async def get_verified_context(
+    ctx: Annotated[AuthContext, Depends(get_auth_context)],
+) -> AuthContext:
+    """For anything only a verified real person may do (FR-04): joining,
+    hosting, messaging, check-in."""
+    if ctx.user.liveness_verified_at is None:
+        raise AppError(403, "LIVENESS_REQUIRED", "Finish verifying it's really you to use this.")
+    return ctx
+
+
+def get_liveness_service(
+    request: Request, session: DbDep, settings: SettingsDep
+) -> LivenessService:
+    provider: LivenessProvider = request.app.state.liveness_provider
+    return LivenessService(session, settings, provider)
+
+
 IdentityServiceDep = Annotated[IdentityService, Depends(get_identity_service)]
 AuthDep = Annotated[AuthContext, Depends(get_auth_context)]
+VerifiedDep = Annotated[AuthContext, Depends(get_verified_context)]
+LivenessServiceDep = Annotated[LivenessService, Depends(get_liveness_service)]

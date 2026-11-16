@@ -61,6 +61,13 @@ class Settings(BaseSettings):
         "trashmail.com",
     ]
 
+    # --- Liveness check (FR-04) ---------------------------------------------
+    # "stub" accepts whatever the app reports and exists only so the rest of
+    # the product can be built and tested. It is refused in prod.
+    liveness_provider: Literal["stub"] = "stub"
+    liveness_check_ttl_s: int = 5 * 60
+    liveness_max_attempts_per_day: int = 5
+
     # --- Outgoing email -----------------------------------------------------
     # "console" prints codes to the API log (development only).
     email_backend: Literal["console", "smtp"] = "console"
@@ -79,6 +86,11 @@ class Settings(BaseSettings):
             if self.email_backend == "console":
                 raise ValueError(
                     "ARC_EMAIL_BACKEND=console would log sign-in codes; use smtp in prod"
+                )
+            if self.liveness_provider == "stub":
+                raise ValueError(
+                    "ARC_LIVENESS_PROVIDER=stub does not check a real face; "
+                    "a real provider is required in prod"
                 )
         return self
 

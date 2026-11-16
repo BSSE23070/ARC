@@ -95,6 +95,12 @@ export const tokens = {
       "fontSize": 11,
       "lineHeight": 16.5,
       "letterSpacing": 0
+    },
+    "splashCard": {
+      "fontFamily": "SpaceGrotesk_700Bold",
+      "fontSize": 10.5,
+      "lineHeight": 11,
+      "letterSpacing": 0
     }
   },
   "space": {

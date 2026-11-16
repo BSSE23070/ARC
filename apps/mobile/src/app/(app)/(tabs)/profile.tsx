@@ -28,11 +28,7 @@ export default function Profile() {
         <Row label={strings.profile.emailLabel} value={user.email} />
         <Row
           label={strings.profile.identityLabel}
-          value={
-            user.liveness_status === 'passed'
-              ? strings.profile.identityPassed
-              : strings.profile.identityPending
-          }
+          value={user.liveness_status === 'passed' ? strings.profile.identityPassed : strings.profile.identityPending}
         />
       </View>
 

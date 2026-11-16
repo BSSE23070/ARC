@@ -7,11 +7,7 @@ export type PagerDotsProps = { count: number; index: number };
 // Figma: page indicator on the welcome carousel (A-WELCOME-1)
 export function PagerDots({ count, index }: PagerDotsProps) {
   return (
-    <View
-      style={styles.row}
-      accessibilityRole="progressbar"
-      accessibilityLabel={`Page ${index + 1} of ${count}`}
-    >
+    <View style={styles.row} accessibilityRole="progressbar" accessibilityLabel={`Page ${index + 1} of ${count}`}>
       {Array.from({ length: count }, (_, i) => (
         <View key={i} style={[styles.dot, i === index && styles.active]} />
       ))}

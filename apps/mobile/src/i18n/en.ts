@@ -77,7 +77,7 @@ export const en = {
     forgot: 'Forgot password?',
     required: 'Enter your username or email, and your password.',
     newPhoneTitle: 'Check your inbox', // Figma: A-EMAIL-CODE
-    newPhoneBody: "This is a new phone, so we sent a code to {email}.",
+    newPhoneBody: 'This is a new phone, so we sent a code to {email}.',
     passwordChanged: 'Password changed. Log in with your new password.',
   },
   forgot: {
@@ -114,6 +114,27 @@ export const en = {
     checkInBody: 'Ticket scanning and Bluetooth check-in arrive with the verification module.',
     photoboothTitle: 'Photobooth opens in Phase 2',
     photoboothBody: 'Photo strips unlock after a verified check-in, once check-in is built.',
+  },
+  splash: {
+    label: 'Arc is opening',
+  },
+  liveness: {
+    title: "Verify it's really you",
+    body: 'A quick check that a real person is setting up this account. Everyone on Arc does it once.',
+    privacy: 'We keep only the result, never a photo or video.',
+    start: 'Start check',
+    tryAgain: 'Try again',
+    logOut: 'Log out',
+    failedTitle: "That didn't work",
+    failedBody: 'We could not confirm the check. You have {count} tries left today.',
+    failedBodyOne: 'We could not confirm the check. You have 1 try left today.',
+    failedBodyNone: "We could not confirm the check, and you've used today's tries. Please try again tomorrow.",
+    expired: 'That took too long. Please start again.',
+    unsupported: 'This version of Arc cannot run the check. Please update the app.',
+    // Shown only while the development stand-in is connected instead of the real face check.
+    stubNotice: 'Development build: the real face check is not connected yet.',
+    stubPass: 'Simulate a pass',
+    stubFail: 'Simulate a fail',
   },
   profile: {
     title: 'Profile',

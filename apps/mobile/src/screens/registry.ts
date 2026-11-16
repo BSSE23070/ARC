@@ -17,7 +17,12 @@ export type ScreenEntry = {
 };
 
 export const SCREENS: ScreenEntry[] = [
-  { route: '(auth)/index', figma: 'A-WELCOME-1..3, C-SESSION', design: 'figma', note: 'C-SUSPENDED copy not yet read from Figma' },
+  {
+    route: '(auth)/index',
+    figma: 'A-WELCOME-1..3, C-SESSION',
+    design: 'figma',
+    note: 'C-SUSPENDED copy not yet read from Figma',
+  },
   { route: '(auth)/sign-up/index', figma: 'A-PHONE', design: 'provisional', note: 'Email instead of phone number' },
   { route: '(auth)/sign-up/code', figma: 'A-OTP, A-OTP-WRONG', design: 'figma', note: 'Code is emailed' },
   { route: '(auth)/sign-up/account', figma: null, design: 'provisional', note: 'Create username + password' },
@@ -27,6 +32,12 @@ export const SCREENS: ScreenEntry[] = [
   { route: '(auth)/log-in/code', figma: 'A-EMAIL-CODE', design: 'provisional', note: 'New-phone email code' },
   { route: '(auth)/forgot-password/index', figma: null, design: 'provisional' },
   { route: '(auth)/forgot-password/reset', figma: null, design: 'provisional' },
+  {
+    route: '(verify)/index',
+    figma: 'A-LIVE-INTRO..A-LIVE-REVIEW',
+    design: 'provisional',
+    note: 'Not yet matched to Figma; real face check not connected',
+  },
   { route: '(app)/(tabs)/index', figma: 'C-ATTENDEE-SHELL', design: 'notice', note: 'Explore: Phase 1' },
   { route: '(app)/(tabs)/meet', figma: 'C-ATTENDEE-SHELL', design: 'notice', note: 'Meet: Phase 1' },
   { route: '(app)/(tabs)/check-in', figma: 'C-ATTENDEE-SHELL', design: 'notice', note: 'Check-in: Phase 1' },

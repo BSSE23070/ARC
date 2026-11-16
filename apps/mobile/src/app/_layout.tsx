@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '@arc/tokens';
 
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
+import { Splash } from '@/features/splash/Splash';
 
 // Keep the splash screen up until fonts and the saved session are ready.
 void SplashScreen.preventAutoHideAsync();
@@ -49,15 +50,30 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
 
   if (!ready) return null;
   const signedIn = state.status === 'signedIn';
+  // New accounts must pass the liveness check before they can use the app (FR-04).
+  const verified = signedIn && state.user.liveness_status === 'passed';
 
+  // The animated splash leads into the welcome screens, so it plays when the
+  // app opens signed out. Signed-in users go straight to where they left off.
+  // Splash reads `play` once, when it first appears.
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-      <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="(app)" />
-      </Stack.Protected>
-      <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-    </Stack>
+    <Splash play={state.status === 'signedOut' && !state.ended}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      >
+        <Stack.Protected guard={verified}>
+          <Stack.Screen name="(app)" />
+        </Stack.Protected>
+        <Stack.Protected guard={signedIn && !verified}>
+          <Stack.Screen name="(verify)" />
+        </Stack.Protected>
+        <Stack.Protected guard={!signedIn}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+      </Stack>
+    </Splash>
   );
 }
