@@ -1,13 +1,21 @@
-"""HTTP routes for sign-up, sign-in, sessions and passwords."""
+"""HTTP routes for sign-up, sign-in, sessions, passwords and the liveness check."""
+
+import uuid
 
 from fastapi import APIRouter, Response, status
 from fastapi.responses import JSONResponse
 
 from arc.core.deps import ClientIpDep, SettingsDep
-from arc.modules.identity.deps import AuthDep, IdentityServiceDep
+from arc.core.errors import error_responses
+from arc.core.security import utcnow
+from arc.modules.identity.deps import AuthDep, IdentityServiceDep, LivenessServiceDep
+from arc.modules.identity.liveness import StartedCheck
 from arc.modules.identity.models import User
 from arc.modules.identity.schemas import (
     Accepted,
+    LivenessCheckOut,
+    LivenessCompleteRequest,
+    LivenessResultOut,
     LoginChallengeResponse,
     LoginRequest,
     LoginResendRequest,
@@ -28,6 +36,7 @@ from arc.modules.identity.service import LoginChallenge, TokenBundle
 
 router = APIRouter()
 auth = APIRouter(prefix="/auth", tags=["auth"])
+liveness = APIRouter(prefix="/liveness", tags=["liveness"])
 
 
 def _user_out(user: User) -> UserOut:
@@ -39,6 +48,10 @@ def _user_out(user: User) -> UserOut:
         liveness_status="passed" if user.liveness_verified_at else "pending",
         created_at=user.created_at,
     )
+
+
+def _expires_in(started: StartedCheck) -> int:
+    return max(0, int((started.check.expires_at - utcnow()).total_seconds()))
 
 
 def _tokens(bundle: TokenBundle) -> TokenResponse:
@@ -53,7 +66,12 @@ def _tokens(bundle: TokenBundle) -> TokenResponse:
 # --- Sign-up ------------------------------------------------------------------
 
 
-@auth.post("/signup/start", status_code=status.HTTP_202_ACCEPTED, operation_id="signupStart")
+@auth.post(
+    "/signup/start",
+    status_code=status.HTTP_202_ACCEPTED,
+    operation_id="signupStart",
+    responses=error_responses(422, 429),
+)
 async def signup_start(
     body: SignupStartRequest, service: IdentityServiceDep, ip: ClientIpDep
 ) -> Accepted:
@@ -62,7 +80,7 @@ async def signup_start(
     return Accepted(resend_after_s=await service.signup_start(body.email, ip))
 
 
-@auth.post("/signup/verify", operation_id="signupVerify")
+@auth.post("/signup/verify", operation_id="signupVerify", responses=error_responses(400, 422, 429))
 async def signup_verify(
     body: SignupVerifyRequest, service: IdentityServiceDep, settings: SettingsDep
 ) -> SignupVerifyResponse:
@@ -71,7 +89,12 @@ async def signup_verify(
     return SignupVerifyResponse(signup_token=token, expires_in=settings.signup_token_ttl_s)
 
 
-@auth.post("/signup/complete", status_code=status.HTTP_201_CREATED, operation_id="signupComplete")
+@auth.post(
+    "/signup/complete",
+    status_code=status.HTTP_201_CREATED,
+    operation_id="signupComplete",
+    responses=error_responses(400, 403, 409, 422),
+)
 async def signup_complete(
     body: SignupCompleteRequest, service: IdentityServiceDep
 ) -> TokenResponse:
@@ -92,7 +115,8 @@ async def signup_complete(
         202: {
             "model": LoginChallengeResponse,
             "description": "New phone: an email code is required.",
-        }
+        },
+        **error_responses(401, 403, 422, 429, 503),
     },
 )
 async def login(body: LoginRequest, service: IdentityServiceDep, ip: ClientIpDep) -> TokenResponse:
@@ -109,13 +133,20 @@ async def login(body: LoginRequest, service: IdentityServiceDep, ip: ClientIpDep
     return _tokens(result)
 
 
-@auth.post("/login/verify", operation_id="loginVerify")
+@auth.post(
+    "/login/verify", operation_id="loginVerify", responses=error_responses(400, 403, 422, 429)
+)
 async def login_verify(body: LoginVerifyRequest, service: IdentityServiceDep) -> TokenResponse:
     """Confirms a new phone with the emailed code and signs it in."""
     return _tokens(await service.login_verify(body.challenge_token, body.code))
 
 
-@auth.post("/login/resend", status_code=status.HTTP_202_ACCEPTED, operation_id="loginResend")
+@auth.post(
+    "/login/resend",
+    status_code=status.HTTP_202_ACCEPTED,
+    operation_id="loginResend",
+    responses=error_responses(400, 403, 422, 429, 503),
+)
 async def login_resend(
     body: LoginResendRequest, service: IdentityServiceDep, ip: ClientIpDep
 ) -> Accepted:
@@ -126,13 +157,18 @@ async def login_resend(
 # --- Sessions -----------------------------------------------------------------
 
 
-@auth.post("/refresh", operation_id="refreshSession")
+@auth.post("/refresh", operation_id="refreshSession", responses=error_responses(401, 403, 422))
 async def refresh(body: RefreshRequest, service: IdentityServiceDep) -> TokenResponse:
     """Swaps a refresh token for a new pair. Each refresh token works once."""
     return _tokens(await service.refresh(body.refresh_token))
 
 
-@auth.post("/logout", status_code=status.HTTP_204_NO_CONTENT, operation_id="logout")
+@auth.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="logout",
+    responses=error_responses(422),
+)
 async def logout(body: LogoutRequest, service: IdentityServiceDep) -> Response:
     """Signs this phone out. Always succeeds."""
     await service.logout(body.refresh_token)
@@ -142,7 +178,12 @@ async def logout(body: LogoutRequest, service: IdentityServiceDep) -> Response:
 # --- Passwords ----------------------------------------------------------------
 
 
-@auth.post("/password/forgot", status_code=status.HTTP_202_ACCEPTED, operation_id="passwordForgot")
+@auth.post(
+    "/password/forgot",
+    status_code=status.HTTP_202_ACCEPTED,
+    operation_id="passwordForgot",
+    responses=error_responses(422, 429),
+)
 async def password_forgot(
     body: PasswordForgotRequest, service: IdentityServiceDep, ip: ClientIpDep
 ) -> Accepted:
@@ -150,7 +191,12 @@ async def password_forgot(
     return Accepted(resend_after_s=await service.password_forgot(body.email, ip))
 
 
-@auth.post("/password/reset", status_code=status.HTTP_204_NO_CONTENT, operation_id="passwordReset")
+@auth.post(
+    "/password/reset",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="passwordReset",
+    responses=error_responses(400, 422, 429),
+)
 async def password_reset(body: PasswordResetRequest, service: IdentityServiceDep) -> Response:
     """Sets a new password with the emailed code and signs every phone out."""
     await service.password_reset(body.email, body.code, body.new_password)
@@ -158,7 +204,10 @@ async def password_reset(body: PasswordResetRequest, service: IdentityServiceDep
 
 
 @auth.post(
-    "/password/change", status_code=status.HTTP_204_NO_CONTENT, operation_id="passwordChange"
+    "/password/change",
+    status_code=status.HTTP_204_NO_CONTENT,
+    operation_id="passwordChange",
+    responses=error_responses(400, 401, 403, 422),
 )
 async def password_change(
     body: PasswordChangeRequest, service: IdentityServiceDep, ctx: AuthDep
@@ -171,9 +220,49 @@ async def password_change(
 # --- Current user -------------------------------------------------------------
 
 
-@router.get("/me", tags=["me"], operation_id="getMe")
+@router.get("/me", tags=["me"], operation_id="getMe", responses=error_responses(401, 403))
 async def get_me(ctx: AuthDep) -> UserOut:
     return _user_out(ctx.user)
 
 
+# --- Liveness check -----------------------------------------------------------
+
+
+@liveness.post(
+    "/checks",
+    status_code=status.HTTP_201_CREATED,
+    operation_id="startLivenessCheck",
+    responses=error_responses(401, 403, 409, 429, 503),
+)
+async def start_liveness_check(service: LivenessServiceDep, ctx: AuthDep) -> LivenessCheckOut:
+    """Starts a liveness attempt. Starting a new one closes any attempt still open."""
+    started = await service.start(ctx.user)
+    return LivenessCheckOut(
+        check_id=started.check.id,
+        provider=started.check.provider,
+        expires_in=_expires_in(started),
+        client_payload=started.client_payload,
+        attempts_left=started.attempts_left,
+    )
+
+
+@liveness.post(
+    "/checks/{check_id}/complete",
+    operation_id="completeLivenessCheck",
+    responses=error_responses(401, 403, 404, 409, 410, 422, 503),
+)
+async def complete_liveness_check(
+    check_id: uuid.UUID, body: LivenessCompleteRequest, service: LivenessServiceDep, ctx: AuthDep
+) -> LivenessResultOut:
+    """Finishes an attempt. The server decides the outcome; a pass verifies the account."""
+    result = await service.complete(ctx.user, check_id, body.evidence)
+    return LivenessResultOut(
+        status=result.status,
+        reason=result.reason,
+        attempts_left=result.attempts_left,
+        user=_user_out(result.user),
+    )
+
+
 router.include_router(auth)
+router.include_router(liveness)

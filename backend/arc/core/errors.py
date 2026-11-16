@@ -14,6 +14,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 log = logging.getLogger("arc.errors")
@@ -34,6 +35,43 @@ class AppError(Exception):
         self.message = message
         self.details = details or {}
         self.headers = headers
+
+
+class ErrorDetail(BaseModel):
+    code: str = Field(description="Stable, machine-readable code, e.g. OTP_INVALID.")
+    message: str = Field(description="Safe to show to the user.")
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class ErrorResponse(BaseModel):
+    """The body of every failed request."""
+
+    error: ErrorDetail
+
+
+_ERROR_DESCRIPTIONS = {
+    400: "The request can't be completed as sent (for example an expired code).",
+    401: "Not signed in, or the session has ended.",
+    403: "Signed in, but not allowed to do this.",
+    404: "Not found.",
+    409: "Conflicts with the current state (for example a taken username).",
+    410: "This is no longer available.",
+    422: "Some of the data sent isn't valid; `details.fields` names the fields.",
+    429: "Too many attempts. Wait for the `Retry-After` header's number of seconds.",
+    503: "A service this depends on is unavailable. Try again shortly.",
+}
+
+
+def error_responses(*status_codes: int) -> dict[int | str, dict[str, Any]]:
+    """OpenAPI entries for the errors a route can return, in the real error shape.
+
+    Listing 422 here also replaces FastAPI's default validation-error schema,
+    which this API never returns.
+    """
+    return {
+        code: {"model": ErrorResponse, "description": _ERROR_DESCRIPTIONS[code]}
+        for code in status_codes
+    }
 
 
 def _body(code: str, message: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
