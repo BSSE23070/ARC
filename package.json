@@ -1,0 +1,26 @@
+{
+  "name": "arc",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "npm run start -w @arc/mobile",
+    "android": "npm run android -w @arc/mobile",
+    "tokens": "npm run build -w @arc/tokens",
+    "api:generate": "npm run generate -w @arc/api-client",
+    "lint": "npm run lint -w @arc/mobile",
+    "typecheck": "npm run typecheck -w @arc/mobile",
+    "test": "npm test -w @arc/mobile"
+  },
+  "overrides": {
+    "react-native-svg": "$react-native-svg"
+  },
+  "dependencies": {
+    "react-native-svg": "15.16.0"
+  }
+}
