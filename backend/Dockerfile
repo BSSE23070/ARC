@@ -5,9 +5,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Install the dependencies in their own layer, before the code is copied, so a
+# code change does not download every package again.
 COPY pyproject.toml constraints.txt ./
+RUN python -c "import tomllib; print('\n'.join(tomllib.load(open('pyproject.toml', 'rb'))['project']['dependencies']))" > requirements.txt \
+    && pip install --no-cache-dir -r requirements.txt -c constraints.txt
+
 COPY arc ./arc
-RUN pip install --no-cache-dir . -c constraints.txt
+RUN pip install --no-cache-dir --no-deps .
 
 COPY alembic.ini ./
 COPY alembic ./alembic
