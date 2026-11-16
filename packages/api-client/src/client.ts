@@ -1,7 +1,7 @@
-import type { components, paths } from './schema';
+import type { components, paths } from "./schema";
 
-export type Schemas = components['schemas'];
-export type User = Schemas['UserOut'];
+export type Schemas = components["schemas"];
+export type User = Schemas["UserOut"];
 type ApiPath = keyof paths;
 
 export type Tokens = { accessToken: string; refreshToken: string };
@@ -14,7 +14,7 @@ export interface TokenStore {
 }
 
 /** Why the server ended the session without the user asking. */
-export type SessionEndReason = 'expired' | 'suspended';
+export type SessionEndReason = "expired" | "suspended";
 
 /** Every failed call throws this. Switch on `code`; show `message` to the user. */
 export class ApiError extends Error {
@@ -25,18 +25,23 @@ export class ApiError extends Error {
     readonly details: Record<string, unknown> = {},
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 
   /** The phone could not reach the server at all. */
   get isNetworkError(): boolean {
-    return this.code === 'NETWORK_ERROR';
+    return this.code === "NETWORK_ERROR";
   }
 }
 
 export type LoginResult =
-  | { kind: 'signed_in'; user: User }
-  | { kind: 'email_code'; challengeToken: string; emailHint: string; resendAfterS: number };
+  | { kind: "signed_in"; user: User }
+  | {
+      kind: "email_code";
+      challengeToken: string;
+      emailHint: string;
+      resendAfterS: number;
+    };
 
 export type ApiClientOptions = {
   baseUrl: string;
@@ -54,7 +59,12 @@ export function createApiClient(options: ApiClientOptions) {
   const doFetch = options.fetch ?? fetch;
   let refreshInFlight: Promise<Tokens | null> | null = null;
 
-  async function send(method: string, path: ApiPath, body?: unknown, accessToken?: string): Promise<Outcome> {
+  async function send(
+    method: string,
+    path: ApiPath,
+    body?: unknown,
+    accessToken?: string,
+  ): Promise<Outcome> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     let response: Response;
@@ -62,19 +72,23 @@ export function createApiClient(options: ApiClientOptions) {
       response = await doFetch(baseUrl + path, {
         method,
         headers: {
-          Accept: 'application/json',
-          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          Accept: "application/json",
+          ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: controller.signal,
       });
     } catch {
-      throw new ApiError(0, 'NETWORK_ERROR', "Can't reach Arc. Check your connection and try again.");
+      throw new ApiError(
+        0,
+        "NETWORK_ERROR",
+        "Can't reach Arc. Check your connection and try again.",
+      );
     } finally {
       clearTimeout(timer);
     }
-    const text = response.status === 204 ? '' : await response.text();
+    const text = response.status === 204 ? "" : await response.text();
     let data: unknown;
     try {
       data = text ? JSON.parse(text) : undefined;
@@ -85,12 +99,19 @@ export function createApiClient(options: ApiClientOptions) {
   }
 
   function toError({ status, data }: Outcome): ApiError {
-    const error = (data as { error?: { code?: string; message?: string; details?: Record<string, unknown> } })
-      ?.error;
+    const error = (
+      data as {
+        error?: {
+          code?: string;
+          message?: string;
+          details?: Record<string, unknown>;
+        };
+      }
+    )?.error;
     return new ApiError(
       status,
-      error?.code ?? 'HTTP_ERROR',
-      error?.message ?? 'Something went wrong. Please try again.',
+      error?.code ?? "HTTP_ERROR",
+      error?.message ?? "Something went wrong. Please try again.",
       error?.details ?? {},
     );
   }
@@ -105,8 +126,11 @@ export function createApiClient(options: ApiClientOptions) {
     onSessionEnded?.(reason);
   }
 
-  async function saveTokens(response: Schemas['TokenResponse']): Promise<User> {
-    await tokenStore.set({ accessToken: response.access_token, refreshToken: response.refresh_token });
+  async function saveTokens(response: Schemas["TokenResponse"]): Promise<User> {
+    await tokenStore.set({
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token,
+    });
     return response.user;
   }
 
@@ -115,14 +139,23 @@ export function createApiClient(options: ApiClientOptions) {
     refreshInFlight ??= (async () => {
       const current = await tokenStore.get();
       if (!current) return null;
-      const outcome = await send('POST', '/api/v1/auth/refresh', { refresh_token: current.refreshToken });
+      const outcome = await send("POST", "/api/v1/auth/refresh", {
+        refresh_token: current.refreshToken,
+      });
       if (outcome.status === 401 || outcome.status === 403) {
-        await endSession(toError(outcome).code === 'ACCOUNT_SUSPENDED' ? 'suspended' : 'expired');
+        await endSession(
+          toError(outcome).code === "ACCOUNT_SUSPENDED"
+            ? "suspended"
+            : "expired",
+        );
         return null;
       }
-      const data = unwrap<Schemas['TokenResponse']>(outcome);
+      const data = unwrap<Schemas["TokenResponse"]>(outcome);
       await saveTokens(data);
-      return { accessToken: data.access_token, refreshToken: data.refresh_token };
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+      };
     })().finally(() => {
       refreshInFlight = null;
     });
@@ -130,28 +163,40 @@ export function createApiClient(options: ApiClientOptions) {
   }
 
   /** A call that needs the user to be signed in. Refreshes the access token once if it has expired. */
-  async function authed<T>(method: string, path: ApiPath, body?: unknown): Promise<T> {
+  async function authed<T>(
+    method: string,
+    path: ApiPath,
+    body?: unknown,
+  ): Promise<T> {
     const tokens = await tokenStore.get();
-    if (!tokens) throw new ApiError(401, 'AUTH_REQUIRED', 'Please log in.');
+    if (!tokens) throw new ApiError(401, "AUTH_REQUIRED", "Please log in.");
 
     let outcome = await send(method, path, body, tokens.accessToken);
     if (outcome.status === 401) {
       const code = toError(outcome).code;
-      if (code === 'TOKEN_EXPIRED' || code === 'TOKEN_INVALID') {
+      if (code === "TOKEN_EXPIRED" || code === "TOKEN_INVALID") {
         const renewed = await refresh();
-        if (!renewed) throw new ApiError(401, 'SESSION_ENDED', 'Please log in again.');
+        if (!renewed)
+          throw new ApiError(401, "SESSION_ENDED", "Please log in again.");
         outcome = await send(method, path, body, renewed.accessToken);
       }
     }
     if (outcome.status === 401) {
-      await endSession('expired');
-    } else if (outcome.status === 403 && toError(outcome).code === 'ACCOUNT_SUSPENDED') {
-      await endSession('suspended');
+      await endSession("expired");
+    } else if (
+      outcome.status === 403 &&
+      toError(outcome).code === "ACCOUNT_SUSPENDED"
+    ) {
+      await endSession("suspended");
     }
     return unwrap<T>(outcome);
   }
 
-  async function open<T>(method: string, path: ApiPath, body?: unknown): Promise<T> {
+  async function open<T>(
+    method: string,
+    path: ApiPath,
+    body?: unknown,
+  ): Promise<T> {
     return unwrap<T>(await send(method, path, body));
   }
 
@@ -159,50 +204,67 @@ export function createApiClient(options: ApiClientOptions) {
     auth: {
       /** Emails a sign-up code. */
       signupStart: (email: string) =>
-        open<Schemas['Accepted']>('POST', '/api/v1/auth/signup/start', {
+        open<Schemas["Accepted"]>("POST", "/api/v1/auth/signup/start", {
           email,
-        } satisfies Schemas['SignupStartRequest']),
+        } satisfies Schemas["SignupStartRequest"]),
 
       signupVerify: (email: string, code: string) =>
-        open<Schemas['SignupVerifyResponse']>('POST', '/api/v1/auth/signup/verify', {
-          email,
-          code,
-        } satisfies Schemas['SignupVerifyRequest']),
+        open<Schemas["SignupVerifyResponse"]>(
+          "POST",
+          "/api/v1/auth/signup/verify",
+          {
+            email,
+            code,
+          } satisfies Schemas["SignupVerifyRequest"],
+        ),
 
       /** Creates the account and signs this phone in. */
-      signupComplete: async (body: Schemas['SignupCompleteRequest']): Promise<User> =>
-        saveTokens(await open<Schemas['TokenResponse']>('POST', '/api/v1/auth/signup/complete', body)),
+      signupComplete: async (
+        body: Schemas["SignupCompleteRequest"],
+      ): Promise<User> =>
+        saveTokens(
+          await open<Schemas["TokenResponse"]>(
+            "POST",
+            "/api/v1/auth/signup/complete",
+            body,
+          ),
+        ),
 
       /** Signs in, or reports that this phone needs an email code first. */
-      login: async (body: Schemas['LoginRequest']): Promise<LoginResult> => {
-        const data = await open<Schemas['TokenResponse'] | Schemas['LoginChallengeResponse']>(
-          'POST',
-          '/api/v1/auth/login',
-          body,
-        );
-        if ('challenge' in data) {
+      login: async (body: Schemas["LoginRequest"]): Promise<LoginResult> => {
+        const data = await open<
+          Schemas["TokenResponse"] | Schemas["LoginChallengeResponse"]
+        >("POST", "/api/v1/auth/login", body);
+        if ("challenge" in data) {
           return {
-            kind: 'email_code',
+            kind: "email_code",
             challengeToken: data.challenge_token,
             emailHint: data.email_hint,
             resendAfterS: data.resend_after_s,
           };
         }
-        return { kind: 'signed_in', user: await saveTokens(data) };
+        return { kind: "signed_in", user: await saveTokens(data) };
       },
 
-      loginVerify: async (challengeToken: string, code: string): Promise<User> =>
+      loginVerify: async (
+        challengeToken: string,
+        code: string,
+      ): Promise<User> =>
         saveTokens(
-          await open<Schemas['TokenResponse']>('POST', '/api/v1/auth/login/verify', {
-            challenge_token: challengeToken,
-            code,
-          } satisfies Schemas['LoginVerifyRequest']),
+          await open<Schemas["TokenResponse"]>(
+            "POST",
+            "/api/v1/auth/login/verify",
+            {
+              challenge_token: challengeToken,
+              code,
+            } satisfies Schemas["LoginVerifyRequest"],
+          ),
         ),
 
       loginResend: (challengeToken: string) =>
-        open<Schemas['Accepted']>('POST', '/api/v1/auth/login/resend', {
+        open<Schemas["Accepted"]>("POST", "/api/v1/auth/login/resend", {
           challenge_token: challengeToken,
-        } satisfies Schemas['LoginResendRequest']),
+        } satisfies Schemas["LoginResendRequest"]),
 
       /** Signs this phone out. Works offline: local tokens are always cleared. */
       logout: async (): Promise<void> => {
@@ -210,27 +272,49 @@ export function createApiClient(options: ApiClientOptions) {
         await tokenStore.clear();
         if (!tokens) return;
         try {
-          await send('POST', '/api/v1/auth/logout', {
+          await send("POST", "/api/v1/auth/logout", {
             refresh_token: tokens.refreshToken,
-          } satisfies Schemas['LogoutRequest']);
+          } satisfies Schemas["LogoutRequest"]);
         } catch {
           // Offline: the server-side session simply expires on its own.
         }
       },
 
       passwordForgot: (email: string) =>
-        open<Schemas['Accepted']>('POST', '/api/v1/auth/password/forgot', {
+        open<Schemas["Accepted"]>("POST", "/api/v1/auth/password/forgot", {
           email,
-        } satisfies Schemas['PasswordForgotRequest']),
+        } satisfies Schemas["PasswordForgotRequest"]),
 
-      passwordReset: (body: Schemas['PasswordResetRequest']) =>
-        open<void>('POST', '/api/v1/auth/password/reset', body),
+      passwordReset: (body: Schemas["PasswordResetRequest"]) =>
+        open<void>("POST", "/api/v1/auth/password/reset", body),
 
-      passwordChange: (body: Schemas['PasswordChangeRequest']) =>
-        authed<void>('POST', '/api/v1/auth/password/change', body),
+      passwordChange: (body: Schemas["PasswordChangeRequest"]) =>
+        authed<void>("POST", "/api/v1/auth/password/change", body),
     },
 
-    me: () => authed<User>('GET', '/api/v1/me'),
+    me: () => authed<User>("GET", "/api/v1/me"),
+
+    liveness: {
+      /** Starts a liveness attempt; any attempt still open is closed. */
+      start: () =>
+        authed<Schemas["LivenessCheckOut"]>("POST", "/api/v1/liveness/checks"),
+
+      /** Sends the provider's result. The server decides whether the check passed. */
+      complete: (
+        checkId: string,
+        evidence: Schemas["LivenessCompleteRequest"]["evidence"],
+      ) => {
+        const template =
+          "/api/v1/liveness/checks/{check_id}/complete" satisfies ApiPath;
+        const path = template.replace(
+          "{check_id}",
+          encodeURIComponent(checkId),
+        ) as ApiPath;
+        return authed<Schemas["LivenessResultOut"]>("POST", path, {
+          evidence,
+        } satisfies Schemas["LivenessCompleteRequest"]);
+      },
+    },
   };
 }
 

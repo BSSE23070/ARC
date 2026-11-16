@@ -49,11 +49,16 @@ function RootNavigator({ fontsReady }: { fontsReady: boolean }) {
 
   if (!ready) return null;
   const signedIn = state.status === 'signedIn';
+  // New accounts must pass the liveness check before they can use the app (FR-04).
+  const verified = signedIn && state.user.liveness_status === 'passed';
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
-      <Stack.Protected guard={signedIn}>
+      <Stack.Protected guard={verified}>
         <Stack.Screen name="(app)" />
+      </Stack.Protected>
+      <Stack.Protected guard={signedIn && !verified}>
+        <Stack.Screen name="(verify)" />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="(auth)" />

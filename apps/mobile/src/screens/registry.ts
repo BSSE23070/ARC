@@ -27,6 +27,7 @@ export const SCREENS: ScreenEntry[] = [
   { route: '(auth)/log-in/code', figma: 'A-EMAIL-CODE', design: 'provisional', note: 'New-phone email code' },
   { route: '(auth)/forgot-password/index', figma: null, design: 'provisional' },
   { route: '(auth)/forgot-password/reset', figma: null, design: 'provisional' },
+  { route: '(verify)/index', figma: null, design: 'provisional', note: 'Liveness check; real face check not connected yet' },
   { route: '(app)/(tabs)/index', figma: 'C-ATTENDEE-SHELL', design: 'notice', note: 'Explore: Phase 1' },
   { route: '(app)/(tabs)/meet', figma: 'C-ATTENDEE-SHELL', design: 'notice', note: 'Meet: Phase 1' },
   { route: '(app)/(tabs)/check-in', figma: 'C-ATTENDEE-SHELL', design: 'notice', note: 'Check-in: Phase 1' },

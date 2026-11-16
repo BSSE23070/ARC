@@ -85,7 +85,9 @@ After the first build, `npm start` (then press `a`) is enough unless native depe
 
 ### 4. Try it
 
-Open the app → Skip → enter any email → read the 6-digit code at http://localhost:8025 → pick a username and password → enter a date of birth. You are signed in, and you stay signed in when you reopen the app.
+Open the app → Skip → enter any email → read the 6-digit code at http://localhost:8025 → pick a username and password → enter a date of birth → **Start check** → **Simulate a pass**. You are signed in, and you stay signed in when you reopen the app.
+
+The liveness check is a development stand-in for now: it does not open the camera, and the API refuses to start in production with it (`ARC_LIVENESS_PROVIDER`). The real face check plugs in behind `LivenessProvider` in `backend/arc/modules/identity/liveness.py`.
 
 ## Everyday commands
 
