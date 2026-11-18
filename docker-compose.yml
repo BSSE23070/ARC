@@ -1,0 +1,63 @@
+# Local development stack.
+#
+#   docker compose up -d                          everything, API included
+#   docker compose up -d postgres redis mailpit   services only (run the API yourself with --reload)
+#
+# Sign-in emails land in Mailpit: http://localhost:8025
+# These credentials are for local development only.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: arc
+      POSTGRES_PASSWORD: arc
+      POSTGRES_DB: arc
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/create-test-db.sql:/docker-entrypoint-initdb.d/10-create-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arc -d arc"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web inbox
+
+  api:
+    build: ./backend
+    environment:
+      ARC_ENV: dev
+      ARC_DATABASE_URL: postgresql+asyncpg://arc:arc@postgres:5432/arc
+      ARC_REDIS_URL: redis://redis:6379/0
+      ARC_EMAIL_BACKEND: smtp
+      ARC_SMTP_HOST: mailpit
+      ARC_SMTP_PORT: "1025"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+volumes:
+  pgdata:

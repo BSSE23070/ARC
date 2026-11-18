@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    ignore:
+      # Expo pins these per SDK release; upgrade them with `npx expo install --fix`.
+      - dependency-name: expo*
+      - dependency-name: react
+      - dependency-name: react-native*
+      - dependency-name: jest*
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
